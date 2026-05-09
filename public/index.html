@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SNOW MD — WhatsApp Bot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --ice: #a8d8f0;
+      --snow: #e8f4fd;
+      --deep: #0a1628;
+      --mid: #0d2040;
+      --card: #0f2a4a;
+      --accent: #00c8ff;
+      --accent2: #7ef3ff;
+      --glow: 0 0 20px rgba(0,200,255,0.4);
+      --success: #00ff88;
+      --warning: #ffcc00;
+      --error: #ff4466;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--deep);
+      color: var(--snow);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── SNOWFALL ── */
+    .snowflakes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+    .snowflake {
+      position: absolute;
+      top: -10px;
+      color: rgba(168,216,240,0.6);
+      font-size: 1em;
+      animation: fall linear infinite;
+    }
+    @keyframes fall {
+      to { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+
+    /* ── GRID BG ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* ── BANNER ── */
+    .header { width: 100%; }
+    .banner-wrap {
+      position: relative;
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0,200,255,0.5), 0 0 80px rgba(0,100,200,0.3);
+      border: 1px solid rgba(0,200,255,0.3);
+    }
+    .banner-img {
+      width: 100%;
+      display: block;
+      border-radius: 16px;
+    }
+    .banner-glow {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 60%, rgba(10,22,40,0.8) 100%);
+      border-radius: 16px;
+      pointer-events: none;
+    }
+
+    /* ── CARD ── */
+    .card {
+      width: 100%;
+      background: linear-gradient(135deg, rgba(15,42,74,0.95), rgba(13,32,64,0.9));
+      border: 1px solid rgba(0,200,255,0.2);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(0,200,255,0.1);
+      backdrop-filter: blur(10px);
+    }
+    .card-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(0,200,255,0.4), transparent);
+    }
+
+    /* ── INPUT ── */
+    .input-group { display: flex; flex-direction: column; gap: 8px; }
+    label { font-size: 0.8rem; color: var(--ice); letter-spacing: 1px; }
+    .input-wrap {
+      display: flex;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(0,200,255,0.2);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .input-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px rgba(0,200,255,0.3);
+    }
+    .flag {
+      padding: 0 14px;
+      display: flex; align-items: center;
+      font-size: 1.2rem;
+      border-right: 1px solid rgba(0,200,255,0.15);
+      background: rgba(0,200,255,0.05);
+    }
+    input[type="tel"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 14px 16px;
+      color: #fff;
+      font-size: 1rem;
+      font-family: 'Rajdhani', sans-serif;
+      letter-spacing: 1px;
+    }
+    input::placeholder { color: rgba(168,216,240,0.3); }
+
+    /* ── BUTTON ── */
+    .btn {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #0077aa, var(--accent));
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(0,200,255,0.3);
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0,200,255,0.5);
+    }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    }
+
+    /* ── CODE BOX ── */
+    .code-box {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(0,200,255,0.3);
+      border-radius: 12px;
+      text-align: center;
+    }
+    .code-box.show { display: flex; }
+    .code-label {
+      font-size: 0.75rem;
+      letter-spacing: 3px;
+      color: var(--ice);
+      text-transform: uppercase;
+    }
+    .code-display {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--accent2);
+      letter-spacing: 8px;
+      text-shadow: 0 0 20px rgba(126,243,255,0.8);
+      animation: codePulse 1.5s ease-in-out infinite;
+    }
+    @keyframes codePulse {
+      0%,100% { text-shadow: 0 0 20px rgba(126,243,255,0.8); }
+      50% { text-shadow: 0 0 40px rgba(126,243,255,1), 0 0 80px rgba(0,200,255,0.5); }
+    }
+    .code-steps {
+      font-size: 0.85rem;
+      color: rgba(168,216,240,0.8);
+      line-height: 1.8;
+      text-align: left;
+    }
+    .code-steps li { margin-left: 16px; }
+
+    /* ── STATUS ── */
+    .status-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .status-bar.show { display: flex; }
+    .status-bar.info { background: rgba(0,200,255,0.1); border: 1px solid rgba(0,200,255,0.3); color: var(--accent2); }
+    .status-bar.success { background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); color: var(--success); }
+    .status-bar.warning { background: rgba(255,204,0,0.1); border: 1px solid rgba(255,204,0,0.3); color: var(--warning); }
+    .status-bar.error { background: rgba(255,68,102,0.1); border: 1px solid rgba(255,68,102,0.3); color: var(--error); }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(0,200,255,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── CONNECTED ── */
+    .connected-box {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
+    }
+    .connected-box.show { display: flex; }
+    .connected-icon {
+      font-size: 3rem;
+      animation: bounce 1s ease infinite;
+    }
+    @keyframes bounce {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .connected-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      color: var(--success);
+      letter-spacing: 2px;
+    }
+    .connected-sub { font-size: 0.85rem; color: var(--ice); }
+
+    /* ── COMMANDS PREVIEW ── */
+    .cmd-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .cmd-chip {
+      background: rgba(0,200,255,0.06);
+      border: 1px solid rgba(0,200,255,0.15);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      color: var(--ice);
+      font-family: 'Orbitron', sans-serif;
+      letter-spacing: 0.5px;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .cmd-chip:hover {
+      background: rgba(0,200,255,0.12);
+      border-color: rgba(0,200,255,0.4);
+      color: var(--accent2);
+    }
+
+    /* ── STATS ── */
+    .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+    .stat {
+      text-align: center;
+      padding: 16px 8px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 10px;
+      border: 1px solid rgba(0,200,255,0.1);
+    }
+    .stat-num {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--accent);
+    }
+    .stat-label { font-size: 0.7rem; color: var(--ice); opacity: 0.7; margin-top: 4px; letter-spacing: 1px; }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: rgba(168,216,240,0.4);
+      letter-spacing: 2px;
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<!-- Snowfall -->
+<div class="snowflakes" id="snowflakes"></div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="banner-wrap">
+      <img src="/banner.jpg" alt="SNOW MD Bot" class="banner-img" />
+      <div class="banner-glow"></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="card">
+    <div class="card-title">📊 Bot Stats</div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">80+</div>
+        <div class="stat-label">Commands</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">24/7</div>
+        <div class="stat-label">Online</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">⚡</div>
+        <div class="stat-label">Fast</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECT CARD -->
+  <div class="card">
+    <div class="card-title">🔗 Connect Your Number</div>
+
+    <div class="input-group" style="margin-bottom:16px">
+      <label>YOUR WHATSAPP NUMBER</label>
+      <div class="input-wrap">
+        <div class="flag">📱</div>
+        <input type="tel" id="phoneInput" placeholder="e.g. 50938758188" />
+      </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">
+      <div class="spinner" id="spinner"></div>
+      <span id="statusText"></span>
+    </div>
+
+    <!-- PAIRING CODE -->
+    <div class="code-box" id="codeBox">
+      <div class="code-label">🔑 Your Pairing Code</div>
+      <div class="code-display" id="codeDisplay">----</div>
+      <ol class="code-steps">
+        <li>Open WhatsApp on your phone</li>
+        <li>Tap <strong>⋮ Menu → Linked Devices</strong></li>
+        <li>Tap <strong>Link a Device</strong></li>
+        <li>Tap <strong>Link with phone number</strong></li>
+        <li>Enter the code above ☝️</li>
+      </ol>
+    </div>
+
+    <!-- CONNECTED -->
+    <div class="connected-box" id="connectedBox">
+      <div class="connected-icon">✅</div>
+      <div class="connected-title">BOT CONNECTED!</div>
+      <div class="connected-sub">Your SNOW MD bot is now live on your WhatsApp.<br>Try <strong>.menu</strong> in any chat!</div>
+    </div>
+
+    <br/>
+    <button class="btn btn-primary" id="connectBtn" onclick="connectBot()">
+      ❄️ &nbsp; GET PAIRING CODE
+    </button>
+  </div>
+
+  <!-- COMMANDS PREVIEW -->
+  <div class="card">
+    <div class="card-title">⚡ Commands Preview</div>
+    <div class="cmd-grid">
+      <div class="cmd-chip">.menu</div>
+      <div class="cmd-chip">.ping</div>
+      <div class="cmd-chip">.alive</div>
+      <div class="cmd-chip">.joke</div>
+      <div class="cmd-chip">.8ball</div>
+      <div class="cmd-chip">.calc</div>
+      <div class="cmd-chip">.ship</div>
+      <div class="cmd-chip">.roast</div>
+      <div class="cmd-chip">.everyone</div>
+      <div class="cmd-chip">.kick</div>
+      <div class="cmd-chip">.promote</div>
+      <div class="cmd-chip">.fact</div>
+      <div class="cmd-chip">.quote</div>
+      <div class="cmd-chip">.poll</div>
+      <div class="cmd-chip">.password</div>
+      <div class="cmd-chip">+80 more...</div>
+    </div>
+  </div>
+
+  <!-- CHANNEL CARD -->
+  <div class="card">
+    <div class="card-title">📢 Official Channel</div>
+    <div style="text-align:center; padding: 8px 0;">
+      <p style="font-size:0.85rem; color:var(--ice); margin-bottom:14px;">
+        Follow our official WhatsApp channel for updates, news and new features!
+      </p>
+      <a href="https://whatsapp.com/channel/0029VbCQ9Mh1noz48V9wET2D" target="_blank" style="text-decoration:none">
+        <button class="btn btn-primary" style="max-width:260px; margin:0 auto; display:block;">
+          📢 &nbsp; JOIN CHANNEL
+        </button>
+      </a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>Developed by <a href="https://wa.me/50938758188">𝙹𝙾𝙽 𝚂𝙽𝙾𝚆</a></p>
+    <p style="margin-top:4px">© 2025 𝐒𝐍𝐎𝐖 𝐌𝐃 — All rights reserved</p>
+  </div>
+
+</div>
+
+<script>
+  // ── SNOWFALL ─────────────────────────────
+  const container = document.getElementById('snowflakes');
+  const chars = ['❄','❅','❆','•','·'];
+  for (let i = 0; i < 30; i++) {
+    const el = document.createElement('div');
+    el.className = 'snowflake';
+    el.textContent = chars[Math.floor(Math.random() * chars.length)];
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.animationDuration = (Math.random() * 8 + 5) + 's';
+    el.style.animationDelay = (Math.random() * 10) + 's';
+    el.style.fontSize = (Math.random() * 0.8 + 0.5) + 'rem';
+    el.style.opacity = Math.random() * 0.6 + 0.2;
+    container.appendChild(el);
+  }
+
+  // ── SOCKET ──────────────────────────────
+  const socket = io();
+
+  socket.on('pairing_code', ({ code }) => {
+    document.getElementById('codeDisplay').textContent = code;
+    document.getElementById('codeBox').classList.add('show');
+    setStatus('🔑 Enter this code in WhatsApp → Linked Devices', 'info', false);
+  });
+
+  socket.on('connected', ({ message }) => {
+    document.getElementById('codeBox').classList.remove('show');
+    document.getElementById('connectedBox').classList.add('show');
+    setStatus('✅ Bot is connected and running!', 'success', false);
+    document.getElementById('connectBtn').disabled = false;
+    document.getElementById('connectBtn').textContent = '✅  CONNECTED';
+  });
+
+  socket.on('status', ({ message, type }) => {
+    setStatus(message, type, type === 'info' || type === 'warning');
+  });
+
+  socket.on('error', ({ message }) => {
+    setStatus('❌ ' + message, 'error', false);
+    document.getElementById('connectBtn').disabled = false;
+    document.getElementById('connectBtn').innerHTML = '❄️ &nbsp; GET PAIRING CODE';
+  });
+
+  // ── CONNECT ──────────────────────────────
+  function connectBot() {
+    const phone = document.getElementById('phoneInput').value.trim().replace(/[^0-9]/g, '');
+    if (!phone || phone.length < 7) {
+      setStatus('❌ Please enter a valid phone number!', 'error', false);
+      return;
+    }
+    document.getElementById('connectBtn').disabled = true;
+    document.getElementById('connectBtn').innerHTML = '⏳ &nbsp; CONNECTING...';
+    document.getElementById('codeBox').classList.remove('show');
+    document.getElementById('connectedBox').classList.remove('show');
+    setStatus('🚀 Starting bot, please wait...', 'info', true);
+    socket.emit('start_bot', { phone });
+  }
+
+  function setStatus(msg, type, showSpinner) {
+    const bar = document.getElementById('statusBar');
+    const text = document.getElementById('statusText');
+    const spinner = document.getElementById('spinner');
+    bar.className = 'status-bar show ' + type;
+    text.textContent = msg;
+    spinner.style.display = showSpinner ? 'block' : 'none';
+  }
+
+  // Enter key support
+  document.getElementById('phoneInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') connectBot();
+  });
+</script>
+</body>
+</html>
